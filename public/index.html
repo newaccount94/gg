@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 400px;
+            margin: 0 auto;
+        }
+        .room-list, .chat-box, .user-list {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="room-list" id="room-list"></div>
+    <input type="text" id="room-name-input" placeholder="Create or Join Room">
+    <button onclick="createOrJoinRoom()">Go</button>
+    
+    <div class="chat-box" id="chat-box"></div>
+    <input type="text" id="message-input" placeholder="Type a message">
+    <button onclick="sendMessage()">Send</button>
+    
+    <div class="user-list" id="user-list"></div>
+    <button onclick="leaveRoom()">Leave Room</button>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    socket.on('roomList', (rooms) => {
+        document.getElementById('room-list').innerHTML = 
+            Object.keys(rooms).map(room => `<div>${room}</div>`).join('');
+    });
+
+    socket.on('userList', (users) => {
+        document.getElementById('user-list').innerHTML = 
+            users.map(user => `<div>${user}</div>`).join('');
+    });
+
+    socket.on('newMessage', (message) => {
+        document.getElementById('chat-box').innerHTML += `<div>${message}</div>`;
+    });
+
+    function createOrJoinRoom() {
+        const roomName = document.getElementById('room-name-input').value;
+        const username = prompt("Enter your username");
+        if (roomName && username) {
+            socket.emit('createRoom', roomName);
+            socket.emit('joinRoom', roomName, username);
+            socket.username = username;
+            socket.roomName = roomName;
+        }
+    }
+
+    function sendMessage() {
+        const message = document.getElementById('message-input').value;
+        if (message && socket.roomName && socket.username) {
+            socket.emit('sendMessage', socket.roomName, message, socket.username);
+            document.getElementById('message-input').value = '';
+        }
+    }
+
+    document.getElementById('message-input').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    function leaveRoom() {
+        if (socket.roomName && socket.username) {
+            socket.emit('leaveRoom', socket.roomName, socket.username);
+        }
+    }
+</script>
+
+</body>
+</html>
